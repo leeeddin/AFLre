@@ -497,43 +497,51 @@ void do_recursive(char **use_argv, u8* seed, u8 flaglen){
 
   u8* use_mem;
   u32 bitmap_size=0;
-  u32 bitmap_size_a[94]; //Array of each chars mapsize
-  u32 bitmap_size_dic[94][2]; //dictionary {mapsize:times}
-  u32 mostsize[2];//which mapsize appears more
+  u32 bitmap_size_a[94]; //Array of each chars' mapsize
+  u32 bitmap_size_dic[94][2]; //key:value {mapsize:times}
+  u32 mostsize[2];
 
+  
   memset(bitmap_size_a, 0, sizeof(bitmap_size_a));
   memset(bitmap_size_dic, 0, sizeof(bitmap_size_dic));
   memset(mostsize, 0, sizeof(mostsize));
 
-  use_mem = ck_alloc(strlen(seed)+2);
+
+  use_mem = ck_alloc((flaglen>strlen(seed)?flaglen:strlen(seed))+16);
+
   if(strlen(seed)){
+
     memcpy(use_mem, seed, strlen(seed));
-    if(flaglen)
-      memcpy(use_mem+strlen(use_mem), dumb, flaglen-strlen(use_mem));
+
+    if(flaglen && flaglen >= strlen(use_mem))
+      memcpy(use_mem+strlen(seed), dumb, flaglen-strlen(seed));
+    
   }else{
-    memcpy(use_mem, dumb, flaglen);//HERE 0 is ok
+
+    memcpy(use_mem, dumb, flaglen>strlen(seed)? strlen(seed):flaglen);
+
   }
 
   /*test all cases
    *  record each case's bimapsize to an array
    *  record {bitmapsize:times} to a dic*/
   for(u8 i=33; i<=126; i++){
+
     memset(use_mem+strlen(seed), i, 1);
-
     write_to_testcase(use_mem, strlen(use_mem));
-
     run_target(use_argv);
-
     bitmap_size = count_bytes(trace_bits);
 
     for(u8 m = 0; m <= i-33; m++){
 
       if(bitmap_size_dic[m][0] == 0){
+
         bitmap_size_dic[m][0] = bitmap_size;
         bitmap_size_dic[m][1]++;
         break;
 
       }else if(bitmap_size_dic[m][0] == bitmap_size){
+
         bitmap_size_dic[m][1]++;
         break;
 
@@ -543,20 +551,21 @@ void do_recursive(char **use_argv, u8* seed, u8 flaglen){
     bitmap_size_a[i-33] = bitmap_size;
 
   }
-  memset(use_mem, 0, sizeof(use_mem));
 
-  /* find out which bitmapsize appears the most
+  memset(use_mem, 0, strlen(use_mem));
+
+  /* find out the bitmapsize that appears the most
    * mostsize[0] = bitmapsize
    * mostsize[1] = appear times
-   * return when all cases results in same path
+   * return when all cases results in same size
    * */
   for(u8 i=0; i<=93; i++){
 
-    if(!bitmap_size_dic[i][0]) break;
+    if(!bitmap_size_dic[i][0]) break;//HERE 所有bitmap_size都相同则返回
 
     OKF("mapsize %d has %d cases",bitmap_size_dic[i][0], bitmap_size_dic[i][1]);
 
-    if(bitmap_size_dic[i][1] == 94) return;//HERE 所有bitmap_size都相同则返回
+    if(bitmap_size_dic[i][1] == 94) return;
 
     if(mostsize[1] < bitmap_size_dic[i][1]){
 
@@ -570,10 +579,13 @@ void do_recursive(char **use_argv, u8* seed, u8 flaglen){
    *
    * */
   for(u8 i=0; i<=93; i++){
+
     if(!(bitmap_size_a[i] == mostsize[0])){
 
       if(strlen(seed)){
+
         memcpy(use_mem, seed, strlen(seed));
+
       }
 
       memset(use_mem+strlen(seed), i+33, 1);
